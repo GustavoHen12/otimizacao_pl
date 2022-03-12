@@ -1,0 +1,91 @@
+\documentclass{article}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\usepackage[utf8]{inputenc}
+\usepackage[portuguese]{babel}
+
+\title{Trabalho Prático de Otimização - Parte 1}
+\author{
+    Gustavo Henrique da Silva Barbosa
+    \and
+    Pietro Polinari Cavassin
+}
+
+\begin{document}
+\maketitle
+
+\section{O Problema}
+\begin{itemize}
+\item Uma empresa de transporte recebeu uma carga a ser transportada.
+A carga tem $n$ itens, $I_1, I_2, \dots, I_n$, cada um com seu peso 
+$w_i$, para $1 \le i \le n$, em kg
+
+\item A empresa tem apenas um caminhão com capacidade máxima de carga $C$ kg,
+que fará uma ou mais viagens.
+
+\item As viagens recebem números de $1$ a $k$, onde $k$ é o número de viagens
+feitas.
+
+\item Determinamos a função $v$, onde $v(i)$ é a viagem onde foi transportado
+o item $I_i$. 
+
+\item Para cada par ordenado $(a, b)$ entregue pelo cliente é determinada a
+restrição $v(a) < v(b)$.
+
+\item A tarefa é decidir quais itens vão em que viagem de forma a minimizar
+o número de viagens.
+\end{itemize}
+
+\newpage
+\section{Modelagem}
+
+$$\min \sum_{j=1}^n y_j$$
+S.A 
+
+\begin{align}
+\sum_{i=1}^n M_{ij} \cdot w_i \le C \cdot y_j&, & 
+    \textsf{ para todo }& j \in \mathbb{N},\ 1 \le j \le n\\
+\sum_{j=1}^n M_{ij} = 1&,             & 
+    \textsf{ para todo }& i \in \mathbb{N},\ 1 \le i \le n
+\end{align}
+Para cada par ordenado $(a,b)$:
+\begin{align}
+\sum_{j=1}^p M_{aj} \le \sum_{j=1}^p M_{bj}&, & 
+    \textsf{ para todo }& p \in \mathbb{N},\ 1 \le p \le n\\
+M_{aj} \not = M_{bj}&, &
+    \textsf{ para todo }& j \in \mathbb{N},\ i \le j \le n
+\end{align}
+Restrições de valor:
+\begin{align}
+0 \le M_{ij}\le 1&, &
+    \textsf{ para todo }& 1 \le i,j \le n\\
+0 \le y_{j}\le 1&, &
+    \textsf{ para todo }& 1 \le j \le n
+\end{align}
+
+Na modelagem, 
+$y_j$ terá valor $0$ se a viagem $j$ não for feita e $1$
+caso contrário.
+$M_{ij}$ terá valor $0$ se o item $i$ será transportado na viagem $j$
+e $0$, caso contrário. Importante lembrar que na programação linear 
+relaxada, valores entre $0$ e $1$ para essas variáveis são possíveis.
+
+A restrição $(1)$ garante que, para cada viagem $j$, a soma das cargas a serem transportadas nela será menor ou igual à carga máxima $C$. A multiplicação por $y_j$ no lado esquerdo transforma a carga máxima em $0$, caso a viagem $j$ não seja feita.
+
+A restrição $(2)$ garante que cada item $i$ seja transportado em apenas uma viagem.
+
+A restrição $(3)$ garante que, para um par ordenado $(a,b)$, $v(a) \le v(b)$. Para uma linha $a$, $\sum_{j=1}^p M_{aj}$ será $1$, caso $v(a) <= p$ e $0$, caso contrário. Portanto, a restrição $(3)$ indica que $v(a) \le v(b)$ (TODO melhorar explicação)
+
+A restrição $(4)$ ainda está errada, tem que arrumar. (TODO)
+
+As restrições $(5)$ e $(6)$ limitam os valores dos itens de $M$ e $y$
+entre $0$ e $1$.
+
+\begin{section}{Referências}
+
+Bin Packing Problem. In: Wikipedia: the free encyclopedia. Disponível em: \url{https://en.wikipedia.org/wiki/Bin_packing_problem} Acesso em: 12 mar 2022. 
+
+\end{section}
+
+\end{document}
