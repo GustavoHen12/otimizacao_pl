@@ -46,7 +46,7 @@ int main() {
   // ********* Variaveis para representacao do problema *********
   // Cria matriz para associar v(i), ou seja,
   // solucao[i][j] = 1 se o item i vai na viagem j
-  int **solucao = malloc (quant_items * sizeof (double*));
+  int **solucao = malloc ((quant_items+1) * sizeof (double*));
   if(solucao == NULL){
     fprintf(stderr, "Ocorreu um erro ao criar a matriz\n");
     return -1;
@@ -57,21 +57,24 @@ int main() {
   // Cria vetor para representar se a viagem será ou não feita
   // viagen[i] = 1 se a viagen i sera feita ou 0 se não
   int *viagens = malloc (quant_items * sizeof (double*));
-  if(solucao == NULL){
+  if(viagens == NULL){
     fprintf(stderr, "Ocorreu um erro ao criar a matriz\n");
     return -1;
   }
+  for (int i = 0; i < quant_items; i++)
+    viagens[i] = 0;
+
   // ******************
 
   // ********* Primeira etapa *********
   //exemplo
-  solucao[3][2] = 1;
-  solucao[5][3] = 1;
+  solucao[2][1] = 1;
+  solucao[4][2] = 1;
 
+  viagens[1] = 1;
   viagens[2] = 1;
-  viagens[3] = 1;
   
-  int k = parcial(quant_items, quant_pares_ord, capacidade_caminhao, pesos_itens, pares, solucao, viagens);
+  parcial(quant_items, quant_pares_ord, capacidade_caminhao, pesos_itens, pares, solucao, viagens);
   
   // ******************
   return 0;
@@ -180,7 +183,7 @@ int **parcial(int quant_items, int quant_pares_ord, int capacidade_caminhao, int
 
   if(lp == NULL){
     fprintf(stderr, "Não foi possível construir o modelo\n");
-    return -1;
+    return NULL;
   }
 
   index_col = (int *) malloc(numero_colunas * sizeof(*index_col)); // ????
@@ -188,11 +191,12 @@ int **parcial(int quant_items, int quant_pares_ord, int capacidade_caminhao, int
 
   if(!index_col || !linha) {
     fprintf(stderr, "Não foi possível alocar espaço para restrições\n");
-    return -1;
+    return NULL;
   }
+  debug_print("numero_colunas: %d, quant_items: %d \n", numero_colunas, quant_items);
 
   // Cria váriaveis no lp solve
-  debug_print("Criando nomes para variáveis: ");
+  debug_print("Criando nomes para variáveis: \n");
   char nome_variavel[20];
   for(int i = 0; i < quant_items; i++){
     for(int j = 0; j < quant_items; j++) {
@@ -200,17 +204,26 @@ int **parcial(int quant_items, int quant_pares_ord, int capacidade_caminhao, int
         sprintf(nome_variavel, "M_%d_%d", i, j);
         debug_print("%s ", nome_variavel);
         set_col_name(lp, getPosicaoColuna(i, j, quant_items), nome_variavel);
+      } else {
+        debug_print("***** ");
       }
+    }
+    debug_print("\n");
+  }
+
+  debug_print("\n");
+
+  for(int i = (quant_items*quant_items); i < numero_colunas; i++){
+    int index = i - (quant_items*quant_items);
+    if(viagens_utilizadas[index] != 1){
+      sprintf(nome_variavel, "V_%d", (i - (quant_items*quant_items)));
+      debug_print("%s ", nome_variavel);
+      set_col_name(lp, i, nome_variavel);
+    } else {
+      debug_print("*** ");
     }
   }
 
-  for(int i = quant_items; i < numero_colunas; i++){
-    if(viagens_utilizadas[i] <= 0){
-      sprintf(nome_variavel, "V_%d", i);
-      debug_print("%s ", nome_variavel);
-      set_col_name(lp, i, nome_variavel);
-    }
-  }
   debug_print("\nNomes de variáveis criados !\n");
 
 
@@ -230,4 +243,6 @@ int **parcial(int quant_items, int quant_pares_ord, int capacidade_caminhao, int
   set_add_rowmode(lp, FALSE);
 
   // Adiciona função objetivo
+
+  return NULL;
 }
