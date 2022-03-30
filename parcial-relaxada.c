@@ -17,7 +17,8 @@ typedef struct par_ord_t {
 
 void le_entrada(int *quant_items, int *quant_pares_ord, int *capacidade_caminhao, int **pesos_itens, par_ord_t **pares);
 
-int **parcial(int *quant_items, int *quant_pares_ord, int *capacidade_caminhao, int *pesos_itens, par_ord_t *pares, int **parcial);
+int **parcial(int quant_items, int quant_pares_ord, int capacidade_caminhao, int *pesos_itens, par_ord_t *pares, int **solucao_parcial, int *viagens_utilizadas);
+
 
 int main() {
   // Variavéis para leitura
@@ -64,10 +65,13 @@ int main() {
 
   // ********* Primeira etapa *********
   //exemplo
-  solucao[2][3] = 1;
+  solucao[3][2] = 1;
   solucao[5][3] = 1;
 
-  int k = parcial(quant_items, quant_pares_ord, capacidade_caminhao, pesos_itens, pares, solucao);
+  viagens[2] = 1;
+  viagens[3] = 1;
+  
+  int k = parcial(quant_items, quant_pares_ord, capacidade_caminhao, pesos_itens, pares, solucao, viagens);
   
   // ******************
   return 0;
@@ -107,20 +111,123 @@ void le_entrada(int *quant_items, int *quant_pares_ord, int *capacidade_caminhao
   debug_print("Fim leitura entrada !\n");
 }
 
-// Cria restricao:
-// sum(linha) = 1
-void adiciona_restricao_linha (int linha, int **solucoes) {
-
+int getPosicaoColuna (int linha, int coluna, int tamanho) {
+  return linha * tamanho + coluna + 1; // O mais 1 é pq o lp solve indexa a partir de 1 aparentemente
 }
 
-void adiciona_restricao_coluna (int linha, int **solucoes) {
-  
+// Cria restricao:
+// sum(linha) = 1
+void adiciona_restricao_linha (int index_linha, int quant_items, int numero_colunas, int **solucao_parcial, lprec *lp) {
+  int *index_col = NULL;
+  REAL *linha = NULL;
+
+  index_col = (int *) malloc(numero_colunas * sizeof(*index_col)); // ????
+  linha = (REAL *) malloc(numero_colunas * sizeof(*linha));
+  int porcentegem_nao_enviada = 1;
+
+  for(int i = 0; i < quant_items; i++) {
+    if(solucao_parcial[index_linha][i] <= 0){
+      index_col[i] = getPosicaoColuna(index_linha, i, quant_items);
+      linha[i] = 1;
+    } else {
+      porcentegem_nao_enviada -= solucao_parcial[index_linha][i];
+      // index_col[i] = getPosicaoColuna(index_linha, i, quant_items);
+      // linha[i] = 0; ???????
+    }
+  }
+
+  if(!add_constraintex(lp, quant_items, linha, index_col, LE, porcentegem_nao_enviada)) {
+    fprintf(stderr, "Não foi possível construir o modelo\n");
+  }
+}
+
+void adiciona_restricao_coluna (int *pesos, int coluna, int quant_items, int numero_colunas, int capacidade_caminhao, int **solucao_parcial, int *viagens_utilizadas, lprec *lp) {
+  int *index_col = NULL;
+  REAL *linha = NULL;
+
+  index_col = (int *) malloc(numero_colunas * sizeof(*index_col)); // ????
+  linha = (REAL *) malloc(numero_colunas * sizeof(*linha));
+  int peso_restante = capacidade_caminhao;
+
+  for(int i = 0; i < quant_items; i++) {
+    if(solucao_parcial[i][coluna] <= 0){
+      index_col[i] = getPosicaoColuna(i, coluna, quant_items);
+      linha[i] = pesos[i];
+    } else {
+      peso_restante -= solucao_parcial[i][coluna] * pesos[i];
+    }
+  }
+
+  if(!add_constraintex(lp, quant_items, linha, index_col, LE, peso_restante)) {
+    fprintf(stderr, "Não foi possível construir o modelo\n");
+  }
 }
 
 void cria_funcao_objetivo (int linha, int **solucoes) {
   
 }
 
-int **parcial(int *quant_items, int *quant_pares_ord, int *capacidade_caminhao, int *pesos_itens, par_ord_t *pares, int **parcial) {
+int **parcial(int quant_items, int quant_pares_ord, int capacidade_caminhao, int *pesos_itens, par_ord_t *pares, int **solucao_parcial, int *viagens_utilizadas) {
 
+  lprec *lp;
+  int numero_colunas;
+  int *index_col = NULL;
+  REAL *linha = NULL;
+
+  // Inicia variáveis
+  numero_colunas = (quant_items*quant_items) + quant_items; // Matriz + vetor com viagens
+  lp = make_lp(0, numero_colunas);
+
+  if(lp == NULL){
+    fprintf(stderr, "Não foi possível construir o modelo\n");
+    return -1;
+  }
+
+  index_col = (int *) malloc(numero_colunas * sizeof(*index_col)); // ????
+  linha = (REAL *) malloc(numero_colunas * sizeof(*linha));
+
+  if(!index_col || !linha) {
+    fprintf(stderr, "Não foi possível alocar espaço para restrições\n");
+    return -1;
+  }
+
+  // Cria váriaveis no lp solve
+  debug_print("Criando nomes para variáveis: ");
+  char nome_variavel[20];
+  for(int i = 0; i < quant_items; i++){
+    for(int j = 0; j < quant_items; j++) {
+      if(solucao_parcial[i][j] <= 0){
+        sprintf(nome_variavel, "M_%d_%d", i, j);
+        debug_print("%s ", nome_variavel);
+        set_col_name(lp, getPosicaoColuna(i, j, quant_items), nome_variavel);
+      }
+    }
+  }
+
+  for(int i = quant_items; i < numero_colunas; i++){
+    if(viagens_utilizadas[i] <= 0){
+      sprintf(nome_variavel, "V_%d", i);
+      debug_print("%s ", nome_variavel);
+      set_col_name(lp, i, nome_variavel);
+    }
+  }
+  debug_print("\nNomes de variáveis criados !\n");
+
+
+  // Cria restrições de linha
+  set_add_rowmode(lp, TRUE);
+  for(int i = 0; i < quant_items; i++) {
+    adiciona_restricao_linha(i, quant_items, numero_colunas, solucao_parcial, lp);
+  }
+  
+  // Cria restrições de coluna
+  for(int i = 0; i < quant_items; i++) {
+    adiciona_restricao_coluna(pesos_itens, i, quant_items, numero_colunas, capacidade_caminhao, solucao_parcial, viagens_utilizadas, lp);
+  }
+
+  // TODO: Cria restrição de valor
+
+  set_add_rowmode(lp, FALSE);
+
+  // Adiciona função objetivo
 }
