@@ -132,13 +132,18 @@ void adiciona_restricao_linha (int index_linha, int quant_items, int numero_colu
     if(solucao_parcial[index_linha][i] <= 0){
       index_col[i] = getPosicaoColuna(index_linha, i, quant_items);
       linha[i] = 1;
+
+      if(i>0) debug_print(" + ");
+      debug_print("%s [%d]", get_col_name(lp, getPosicaoColuna(index_linha, i, quant_items)), getPosicaoColuna(index_linha, i, quant_items));
     } else {
       porcentegem_nao_enviada -= solucao_parcial[index_linha][i];
+      debug_print("           ");
       // index_col[i] = getPosicaoColuna(index_linha, i, quant_items);
       // linha[i] = 0; ???????
     }
   }
 
+  debug_print(" <= %d\n", porcentegem_nao_enviada);
   if(!add_constraintex(lp, quant_items, linha, index_col, LE, porcentegem_nao_enviada)) {
     fprintf(stderr, "Não foi possível construir o modelo\n");
   }
@@ -156,10 +161,16 @@ void adiciona_restricao_coluna (int *pesos, int coluna, int quant_items, int num
     if(solucao_parcial[i][coluna] <= 0){
       index_col[i] = getPosicaoColuna(i, coluna, quant_items);
       linha[i] = pesos[i];
+
+      if(i>0) debug_print(" + ");
+      debug_print("%s [%d]", get_col_name(lp, getPosicaoColuna(i, coluna, quant_items)), getPosicaoColuna(i, coluna, quant_items));
     } else {
+      debug_print("           ");
       peso_restante -= solucao_parcial[i][coluna] * pesos[i];
     }
   }
+
+    debug_print(" <= %d\n", peso_restante);
 
   if(!add_constraintex(lp, quant_items, linha, index_col, LE, peso_restante)) {
     fprintf(stderr, "Não foi possível construir o modelo\n");
@@ -178,7 +189,7 @@ int **parcial(int quant_items, int quant_pares_ord, int capacidade_caminhao, int
   REAL *linha = NULL;
 
   // Inicia variáveis
-  numero_colunas = (quant_items*quant_items) + quant_items; // Matriz + vetor com viagens
+  numero_colunas = (quant_items*quant_items) + quant_items + 1; // Matriz + vetor com viagens
   lp = make_lp(0, numero_colunas);
 
   if(lp == NULL){
@@ -202,7 +213,7 @@ int **parcial(int quant_items, int quant_pares_ord, int capacidade_caminhao, int
     for(int j = 0; j < quant_items; j++) {
       if(solucao_parcial[i][j] <= 0){
         sprintf(nome_variavel, "M_%d_%d", i, j);
-        debug_print("%s ", nome_variavel);
+        debug_print("%s[%d] ", nome_variavel, getPosicaoColuna(i, j, quant_items));
         set_col_name(lp, getPosicaoColuna(i, j, quant_items), nome_variavel);
       } else {
         debug_print("***** ");
@@ -213,10 +224,10 @@ int **parcial(int quant_items, int quant_pares_ord, int capacidade_caminhao, int
 
   debug_print("\n");
 
-  for(int i = (quant_items*quant_items); i < numero_colunas; i++){
-    int index = i - (quant_items*quant_items);
+  for(int i = (quant_items*quant_items) + 1; i < numero_colunas; i++){
+    int index = i - (quant_items*quant_items) - 1;
     if(viagens_utilizadas[index] != 1){
-      sprintf(nome_variavel, "V_%d", (i - (quant_items*quant_items)));
+      sprintf(nome_variavel, "V_%d", (i - (quant_items*quant_items) - 1));
       debug_print("%s ", nome_variavel);
       set_col_name(lp, i, nome_variavel);
     } else {
@@ -229,11 +240,14 @@ int **parcial(int quant_items, int quant_pares_ord, int capacidade_caminhao, int
 
   // Cria restrições de linha
   set_add_rowmode(lp, TRUE);
+  debug_print("Criando restrições...\n");
+  debug_print("Criando restrição para linha da matriz: \n");
   for(int i = 0; i < quant_items; i++) {
     adiciona_restricao_linha(i, quant_items, numero_colunas, solucao_parcial, lp);
   }
   
   // Cria restrições de coluna
+  debug_print("Criando restrição para coluna da matriz: \n");
   for(int i = 0; i < quant_items; i++) {
     adiciona_restricao_coluna(pesos_itens, i, quant_items, numero_colunas, capacidade_caminhao, solucao_parcial, viagens_utilizadas, lp);
   }
