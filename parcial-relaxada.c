@@ -10,7 +10,7 @@
 #define debug_print(...) do{ } while (0)
 #endif
 
-typedef struct par_ord_t {
+typedef struct par_ord_t { 
   int a, b;
 } par_ord_t;
 
@@ -118,6 +118,10 @@ int getPosicaoColuna (int linha, int coluna, int tamanho) {
   return linha * tamanho + coluna + 1; // O mais 1 é pq o lp solve indexa a partir de 1 aparentemente
 }
 
+int getPosicaoVariaveisVetor (int index, int tamanho) {
+  return index + (tamanho*tamanho) + 1 ; // O mais 1 é pq o lp solve indexa a partir de 1 aparentemente
+}
+
 // Cria restricao:
 // sum(linha) = 1
 void adiciona_restricao_linha (int index_linha, int quant_items, int numero_colunas, int **solucao_parcial, lprec *lp) {
@@ -126,25 +130,24 @@ void adiciona_restricao_linha (int index_linha, int quant_items, int numero_colu
 
   index_col = (int *) malloc(numero_colunas * sizeof(*index_col)); // ????
   linha = (REAL *) malloc(numero_colunas * sizeof(*linha));
-  int porcentegem_nao_enviada = 1;
+  int tam_linha = 0;
+  float porcentegem_nao_enviada = 1;
 
   for(int i = 0; i < quant_items; i++) {
     if(solucao_parcial[index_linha][i] <= 0){
       index_col[i] = getPosicaoColuna(index_linha, i, quant_items);
       linha[i] = 1;
-
+      tam_linha++;
       if(i>0) debug_print(" + ");
       debug_print("%s [%d]", get_col_name(lp, getPosicaoColuna(index_linha, i, quant_items)), getPosicaoColuna(index_linha, i, quant_items));
     } else {
       porcentegem_nao_enviada -= solucao_parcial[index_linha][i];
-      debug_print("           ");
-      // index_col[i] = getPosicaoColuna(index_linha, i, quant_items);
-      // linha[i] = 0; ???????
+      debug_print(" +           ");
     }
   }
 
-  debug_print(" <= %d\n", porcentegem_nao_enviada);
-  if(!add_constraintex(lp, quant_items, linha, index_col, LE, porcentegem_nao_enviada)) {
+  debug_print(" = %.2f\n", porcentegem_nao_enviada);
+  if(!add_constraintex(lp, tam_linha, linha, index_col, EQ, porcentegem_nao_enviada)) {
     fprintf(stderr, "Não foi possível construir o modelo\n");
   }
 }
@@ -155,30 +158,60 @@ void adiciona_restricao_coluna (int *pesos, int coluna, int quant_items, int num
 
   index_col = (int *) malloc(numero_colunas * sizeof(*index_col)); // ????
   linha = (REAL *) malloc(numero_colunas * sizeof(*linha));
+  int tam_linha = 0;
   int peso_restante = capacidade_caminhao;
 
   for(int i = 0; i < quant_items; i++) {
     if(solucao_parcial[i][coluna] <= 0){
       index_col[i] = getPosicaoColuna(i, coluna, quant_items);
       linha[i] = pesos[i];
-
+      tam_linha++;
       if(i>0) debug_print(" + ");
-      debug_print("%s [%d]", get_col_name(lp, getPosicaoColuna(i, coluna, quant_items)), getPosicaoColuna(i, coluna, quant_items));
+      debug_print("%d*%s [%d]", pesos[i], get_col_name(lp, getPosicaoColuna(i, coluna, quant_items)), getPosicaoColuna(i, coluna, quant_items));
     } else {
-      debug_print("           ");
+      debug_print(" +           ");
       peso_restante -= solucao_parcial[i][coluna] * pesos[i];
     }
   }
 
-    debug_print(" <= %d\n", peso_restante);
+  // adiciona constante
+  if(viagens_utilizadas[coluna] <= 0){
+    index_col[coluna] = getPosicaoVariaveisVetor(coluna, quant_items);
+    linha[coluna] = -1 * peso_restante;
+    tam_linha++;
+    debug_print(" + ");
+    debug_print("%.1f*%s [%d]", linha[coluna], get_col_name(lp, index_col[coluna]), index_col[coluna]);
+    peso_restante = 0;
+  }
 
-  if(!add_constraintex(lp, quant_items, linha, index_col, LE, peso_restante)) {
+  debug_print(" <= %d\n", peso_restante);
+
+  if(!add_constraintex(lp, tam_linha, linha, index_col, LE, peso_restante)) {
     fprintf(stderr, "Não foi possível construir o modelo\n");
   }
 }
 
-void cria_funcao_objetivo (int linha, int **solucoes) {
-  
+void cria_funcao_objetivo (int quant_itens, int numero_colunas, int *viagens_utilizadas, lprec *lp) {
+  int *index_col = NULL;
+  REAL *linha = NULL;
+
+  index_col = (int *) malloc(numero_colunas * sizeof(*index_col));
+  linha = (REAL *) malloc(numero_colunas * sizeof(*linha));
+  int tamanho = 2;
+
+  for(int i = 0; i < quant_itens; i++){
+    if(viagens_utilizadas[i] <= 0){
+      index_col[i] = getPosicaoVariaveisVetor(i, quant_itens);
+      linha[i] = 1;
+      tamanho++;
+      debug_print(" + ");
+      debug_print("%.1f*%s [%d]", linha[i], get_col_name(lp, index_col[i]), index_col[i]);
+    }
+  }
+
+  if(!set_obj_fnex(lp, tamanho, linha, index_col)) {
+    fprintf(stderr, "Não foi possível construir o modelo\n");
+  }
 }
 
 int **parcial(int quant_items, int quant_pares_ord, int capacidade_caminhao, int *pesos_itens, par_ord_t *pares, int **solucao_parcial, int *viagens_utilizadas) {
@@ -207,7 +240,7 @@ int **parcial(int quant_items, int quant_pares_ord, int capacidade_caminhao, int
   debug_print("numero_colunas: %d, quant_items: %d \n", numero_colunas, quant_items);
 
   // Cria váriaveis no lp solve
-  debug_print("Criando nomes para variáveis: \n");
+  debug_print("Criando nomes para variáveis: \n"); 
   char nome_variavel[20];
   for(int i = 0; i < quant_items; i++){
     for(int j = 0; j < quant_items; j++) {
@@ -227,7 +260,7 @@ int **parcial(int quant_items, int quant_pares_ord, int capacidade_caminhao, int
   for(int i = (quant_items*quant_items) + 1; i < numero_colunas; i++){
     int index = i - (quant_items*quant_items) - 1;
     if(viagens_utilizadas[index] != 1){
-      sprintf(nome_variavel, "V_%d", (i - (quant_items*quant_items) - 1));
+      sprintf(nome_variavel, "Y_%d", (i - (quant_items*quant_items) - 1));
       debug_print("%s ", nome_variavel);
       set_col_name(lp, i, nome_variavel);
     } else {
@@ -255,6 +288,25 @@ int **parcial(int quant_items, int quant_pares_ord, int capacidade_caminhao, int
   // TODO: Cria restrição de valor
 
   set_add_rowmode(lp, FALSE);
+
+  cria_funcao_objetivo(quant_items, numero_colunas, viagens_utilizadas, lp);
+
+  set_minim(lp);
+  printf("\n\n");
+  write_LP(lp, stdout);
+
+  /* I only want to see important messages on screen while solving */
+  set_verbose(lp, IMPORTANT);
+
+  /* Now let lpsolve calculate a solution */
+  solve(lp);
+
+  printf("\nObjective value: %f\n", get_objective(lp));
+
+  /* variable values */
+  get_variables(lp, linha);
+  for(int i = 0; i < numero_colunas; i++)
+    printf("%s: %f\n", get_col_name(lp, i + 1), linha[i]);
 
   // Adiciona função objetivo
 
