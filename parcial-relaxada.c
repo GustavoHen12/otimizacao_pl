@@ -134,16 +134,11 @@ void adiciona_restricao_linha (int index_linha, int quant_items, int numero_colu
   float porcentegem_nao_enviada = 1;
 
   for(int i = 0; i < quant_items; i++) {
-    if(solucao_parcial[index_linha][i] <= 0){
-      index_col[i] = getPosicaoColuna(index_linha, i, quant_items);
-      linha[i] = 1;
-      tam_linha++;
-      if(i>0) debug_print(" + ");
-      debug_print("%s [%d]", get_col_name(lp, getPosicaoColuna(index_linha, i, quant_items)), getPosicaoColuna(index_linha, i, quant_items));
-    } else {
-      porcentegem_nao_enviada -= solucao_parcial[index_linha][i];
-      debug_print(" +           ");
-    }
+    index_col[i] = getPosicaoColuna(index_linha, i, quant_items);
+    linha[i] = 1;
+    tam_linha++;
+    if(i>0) debug_print(" + ");
+    debug_print("%s [%d]", get_col_name(lp, getPosicaoColuna(index_linha, i, quant_items)), getPosicaoColuna(index_linha, i, quant_items));
   }
 
   debug_print(" = %.2f\n", porcentegem_nao_enviada);
@@ -159,34 +154,41 @@ void adiciona_restricao_coluna (int *pesos, int coluna, int quant_items, int num
   index_col = (int *) malloc(numero_colunas * sizeof(*index_col)); // ????
   linha = (REAL *) malloc(numero_colunas * sizeof(*linha));
   int tam_linha = 0;
-  int peso_restante = capacidade_caminhao;
 
   for(int i = 0; i < quant_items; i++) {
-    if(solucao_parcial[i][coluna] <= 0){
-      index_col[i] = getPosicaoColuna(i, coluna, quant_items);
-      linha[i] = pesos[i];
-      tam_linha++;
-      if(i>0) debug_print(" + ");
-      debug_print("%d*%s [%d]", pesos[i], get_col_name(lp, getPosicaoColuna(i, coluna, quant_items)), getPosicaoColuna(i, coluna, quant_items));
-    } else {
-      debug_print(" +           ");
-      peso_restante -= solucao_parcial[i][coluna] * pesos[i];
-    }
+    index_col[i] = getPosicaoColuna(i, coluna, quant_items);
+    linha[i] = pesos[i];
+    tam_linha++;
+    if(i>0) debug_print(" + ");
+    debug_print("%.0f*%s [%d]", linha[i], get_col_name(lp, index_col[i]), index_col[i]);
   }
 
   // adiciona constante
-  if(viagens_utilizadas[coluna] <= 0){
-    index_col[coluna] = getPosicaoVariaveisVetor(coluna, quant_items);
-    linha[coluna] = -1 * peso_restante;
-    tam_linha++;
-    debug_print(" + ");
-    debug_print("%.1f*%s [%d]", linha[coluna], get_col_name(lp, index_col[coluna]), index_col[coluna]);
-    peso_restante = 0;
+  index_col[quant_items] = getPosicaoVariaveisVetor(coluna, quant_items);
+  linha[quant_items] = -1 * capacidade_caminhao;
+  tam_linha++;
+
+  debug_print(" + ");
+  debug_print("%.1f*%s [%d]", linha[coluna], get_col_name(lp, index_col[coluna]), index_col[coluna]);
+  
+  debug_print(" <= %d\n", 0);
+
+  if(!add_constraintex(lp, quant_items + 1, linha, index_col, LE, 0)) {
+    fprintf(stderr, "Não foi possível construir o modelo\n");
   }
+}
 
-  debug_print(" <= %d\n", peso_restante);
+void adiciona_valor_restricao (int index_var, int igual_a, int op,  lprec *lp) {
+  int *index_col = NULL;
+  REAL *linha = NULL;
 
-  if(!add_constraintex(lp, tam_linha, linha, index_col, LE, peso_restante)) {
+  index_col = (int *) malloc(2 * sizeof(*index_col));
+  linha = (REAL *) malloc(2 * sizeof(*linha));
+
+  index_col[0] = index_var;
+  linha[0] = 1;
+
+  if(!add_constraintex(lp, 1, linha, index_col, op, igual_a)) {
     fprintf(stderr, "Não foi possível construir o modelo\n");
   }
 }
@@ -197,16 +199,12 @@ void cria_funcao_objetivo (int quant_itens, int numero_colunas, int *viagens_uti
 
   index_col = (int *) malloc(numero_colunas * sizeof(*index_col));
   linha = (REAL *) malloc(numero_colunas * sizeof(*linha));
-  int tamanho = 2;
+  int tamanho = 0;
 
   for(int i = 0; i < quant_itens; i++){
-    if(viagens_utilizadas[i] <= 0){
-      index_col[i] = getPosicaoVariaveisVetor(i, quant_itens);
-      linha[i] = 1;
-      tamanho++;
-      debug_print(" + ");
-      debug_print("%.1f*%s [%d]", linha[i], get_col_name(lp, index_col[i]), index_col[i]);
-    }
+    index_col[i] = getPosicaoVariaveisVetor(i, quant_itens);
+    linha[i] = 1;
+    tamanho++;
   }
 
   if(!set_obj_fnex(lp, tamanho, linha, index_col)) {
@@ -222,7 +220,7 @@ int **parcial(int quant_items, int quant_pares_ord, int capacidade_caminhao, int
   REAL *linha = NULL;
 
   // Inicia variáveis
-  numero_colunas = (quant_items*quant_items) + quant_items + 1; // Matriz + vetor com viagens
+  numero_colunas = (quant_items*quant_items) + quant_items; // Matriz + vetor com viagens
   lp = make_lp(0, numero_colunas);
 
   if(lp == NULL){
@@ -244,28 +242,20 @@ int **parcial(int quant_items, int quant_pares_ord, int capacidade_caminhao, int
   char nome_variavel[20];
   for(int i = 0; i < quant_items; i++){
     for(int j = 0; j < quant_items; j++) {
-      if(solucao_parcial[i][j] <= 0){
-        sprintf(nome_variavel, "M_%d_%d", i, j);
+        sprintf(nome_variavel, "M_%d_%d", i+1, j+1);
         debug_print("%s[%d] ", nome_variavel, getPosicaoColuna(i, j, quant_items));
         set_col_name(lp, getPosicaoColuna(i, j, quant_items), nome_variavel);
-      } else {
-        debug_print("***** ");
-      }
     }
     debug_print("\n");
   }
 
   debug_print("\n");
 
-  for(int i = (quant_items*quant_items) + 1; i < numero_colunas; i++){
+  for(int i = (quant_items*quant_items) + 1; i <= numero_colunas; i++){
     int index = i - (quant_items*quant_items) - 1;
-    if(viagens_utilizadas[index] != 1){
-      sprintf(nome_variavel, "Y_%d", (i - (quant_items*quant_items) - 1));
-      debug_print("%s ", nome_variavel);
-      set_col_name(lp, i, nome_variavel);
-    } else {
-      debug_print("*** ");
-    }
+    sprintf(nome_variavel, "Y_%d", (i - (quant_items*quant_items)));
+    debug_print("%s ", nome_variavel);
+    set_col_name(lp, i, nome_variavel);
   }
 
   debug_print("\nNomes de variáveis criados !\n");
@@ -285,7 +275,25 @@ int **parcial(int quant_items, int quant_pares_ord, int capacidade_caminhao, int
     adiciona_restricao_coluna(pesos_itens, i, quant_items, numero_colunas, capacidade_caminhao, solucao_parcial, viagens_utilizadas, lp);
   }
 
-  // TODO: Cria restrição de valor
+  debug_print("Criando restrição para valores preenchidos: \n");
+  for(int i = 0; i < quant_items; i++){
+    // verifica vetor de viagens
+    if(viagens_utilizadas[i] != 0) {
+      adiciona_valor_restricao(getPosicaoVariaveisVetor(i, quant_items), viagens_utilizadas[i], EQ, lp);
+    } else {
+      adiciona_valor_restricao(getPosicaoVariaveisVetor(i, quant_items), 0, GE, lp);
+      adiciona_valor_restricao(getPosicaoVariaveisVetor(i, quant_items), 1, LE, lp);
+    }
+
+    for(int j = 0; j < quant_items; j++){
+      if(solucao_parcial[i][j] != 0) {
+        adiciona_valor_restricao(getPosicaoColuna(i, j, quant_items), solucao_parcial[i][j], EQ, lp);
+      } else {
+        adiciona_valor_restricao(getPosicaoColuna(i, j, quant_items), 0, GE, lp);
+        adiciona_valor_restricao(getPosicaoColuna(i, j, quant_items), 1, LE, lp);
+      }
+    }
+  }
 
   set_add_rowmode(lp, FALSE);
 
@@ -308,7 +316,7 @@ int **parcial(int quant_items, int quant_pares_ord, int capacidade_caminhao, int
   for(int i = 0; i < numero_colunas; i++)
     printf("%s: %f\n", get_col_name(lp, i + 1), linha[i]);
 
-  // Adiciona função objetivo
+  // Adiciona função oC23: 0.000000bjetivo
 
   return NULL;
 }
