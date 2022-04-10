@@ -17,8 +17,7 @@ typedef struct par_ord_t {
 
 void le_entrada(int *quant_items, int *quant_pares_ord, int *capacidade_caminhao, int **pesos_itens, par_ord_t **pares);
 
-int **parcial(int quant_items, int quant_pares_ord, int capacidade_caminhao, int *pesos_itens, par_ord_t *pares, int **solucao_parcial, int *viagens_utilizadas);
-
+float parcial(int quant_items, int quant_pares_ord, int capacidade_caminhao, int *pesos_itens, par_ord_t *pares, int **solucao_parcial, int *viagens_utilizadas);
 
 int main() {
   // Variavéis para leitura
@@ -26,22 +25,8 @@ int main() {
   int *pesos_itens;
   par_ord_t *pares;
 
-  // Representacao das restricoes
-  int **matriz_result;
-
+  // Le entrada do problema
   le_entrada(&quant_items, &quant_pares_ord, &capacidade_caminhao, &pesos_itens, &pares);
-
-  // **REMOVER: prints para debug**
-  debug_print("%d, %d, %d\n", quant_items, quant_pares_ord, capacidade_caminhao);
-  for(int i = 0; i < quant_items; i++){
-    debug_print("%d ", pesos_itens[i]);
-  }
-  debug_print("\n");
-  for(int i = 0; i < quant_pares_ord; i++){
-    debug_print("a = %d, ", pares[i].a);
-    debug_print("b = %d\n", pares[i].b);
-  }
-  // ****
 
   // ********* Variaveis para representacao do problema *********
   // Cria matriz para associar v(i), ou seja,
@@ -64,9 +49,7 @@ int main() {
   for (int i = 0; i < quant_items; i++)
     viagens[i] = 0;
 
-  // ******************
-
-  // ********* Primeira etapa *********
+  // ********* Executa *********
   //exemplo
   solucao[2][1] = 1;
   solucao[4][2] = 1;
@@ -74,9 +57,10 @@ int main() {
   viagens[1] = 1;
   viagens[2] = 1;
   
-  parcial(quant_items, quant_pares_ord, capacidade_caminhao, pesos_itens, pares, solucao, viagens);
-  
-  // ******************
+  // Executa funcao parcial que ira calcular o resultado da funcao objetiva
+  float resultado = parcial(quant_items, quant_pares_ord, capacidade_caminhao, pesos_itens, pares, solucao, viagens);
+
+  printf("RESULTADO: %.2f\n", resultado);  
   return 0;
 }
 
@@ -88,10 +72,10 @@ void le_entrada(int *quant_items, int *quant_pares_ord, int *capacidade_caminhao
   scanf("%d", quant_pares_ord);
   scanf("%d", capacidade_caminhao);
 
-  // Inicia pesos
+  // Le pesos dos itens
   *pesos_itens = malloc(sizeof(int) * (*quant_items));
   if(!*pesos_itens){
-    perror("Não foi possível alocar espaço para os pesos !\n");
+    fprintf(stderr,"Não foi possível alocar espaço para os pesos !\n");
     return;
   }
 
@@ -99,10 +83,10 @@ void le_entrada(int *quant_items, int *quant_pares_ord, int *capacidade_caminhao
     scanf("%d", &((*pesos_itens)[i]));
   }
 
-  // inicia pares ordenados
+  // Le pares ordenados
   *pares = malloc(sizeof(par_ord_t) * (*quant_pares_ord));
   if(! *pares){
-    perror("Não foi possível alocar espaço para os pares ordenados !\n");
+    fprintf(stderr, "Não foi possível alocar espaço para os pares ordenados !\n");
     return;
   }
 
@@ -114,71 +98,68 @@ void le_entrada(int *quant_items, int *quant_pares_ord, int *capacidade_caminhao
   debug_print("Fim leitura entrada !\n");
 }
 
-int getPosicaoColuna (int linha, int coluna, int tamanho) {
-  return linha * tamanho + coluna + 1; // O mais 1 é pq o lp solve indexa a partir de 1 aparentemente
+/************ FUNCOES AUXILIARES ************/
+
+// Recebe a posição da matriz e retorna o índice da variável correpondente no lp solve
+int getPosicaoVariaveisMatriz (int linha, int coluna, int tamanho) {
+  return linha * tamanho + coluna + 1; // O +1 é pq o lp solve indexa as variaveis a partir de 1
 }
 
+// Recebe a posição do vetor e retorna o índice da variável correpondente no lp solve
 int getPosicaoVariaveisVetor (int index, int tamanho) {
-  return index + (tamanho*tamanho) + 1 ; // O mais 1 é pq o lp solve indexa a partir de 1 aparentemente
+  return index + (tamanho*tamanho) + 1 ; // O +1 é pq o lp solve indexa as variaveis a partir de 1
 }
 
-// Cria restricao:
-// sum(linha) = 1
-void adiciona_restricao_linha (int index_linha, int quant_items, int numero_colunas, int **solucao_parcial, lprec *lp) {
+// Adiciona a restrição: Os itens devem ser enviados completamente
+// Portanto a soma da porcentagem enviada por item deve ser igual a 1
+void adiciona_restricao_linha (int index_linha, int quant_itens, int quant_variaveis, lprec *lp) {
   int *index_col = NULL;
   REAL *linha = NULL;
-
-  index_col = (int *) malloc(numero_colunas * sizeof(*index_col)); // ????
-  linha = (REAL *) malloc(numero_colunas * sizeof(*linha));
-  int tam_linha = 0;
-  float porcentegem_nao_enviada = 1;
-
-  for(int i = 0; i < quant_items; i++) {
-    index_col[i] = getPosicaoColuna(index_linha, i, quant_items);
-    linha[i] = 1;
-    tam_linha++;
-    if(i>0) debug_print(" + ");
-    debug_print("%s [%d]", get_col_name(lp, getPosicaoColuna(index_linha, i, quant_items)), getPosicaoColuna(index_linha, i, quant_items));
-  }
-
-  debug_print(" = %.2f\n", porcentegem_nao_enviada);
-  if(!add_constraintex(lp, tam_linha, linha, index_col, EQ, porcentegem_nao_enviada)) {
-    fprintf(stderr, "Não foi possível construir o modelo\n");
-  }
-}
-
-void adiciona_restricao_coluna (int *pesos, int coluna, int quant_items, int numero_colunas, int capacidade_caminhao, int **solucao_parcial, int *viagens_utilizadas, lprec *lp) {
-  int *index_col = NULL;
-  REAL *linha = NULL;
-
-  index_col = (int *) malloc(numero_colunas * sizeof(*index_col)); // ????
-  linha = (REAL *) malloc(numero_colunas * sizeof(*linha));
-  int tam_linha = 0;
-
-  for(int i = 0; i < quant_items; i++) {
-    index_col[i] = getPosicaoColuna(i, coluna, quant_items);
-    linha[i] = pesos[i];
-    tam_linha++;
-    if(i>0) debug_print(" + ");
-    debug_print("%.0f*%s [%d]", linha[i], get_col_name(lp, index_col[i]), index_col[i]);
-  }
-
-  // adiciona constante
-  index_col[quant_items] = getPosicaoVariaveisVetor(coluna, quant_items);
-  linha[quant_items] = -1 * capacidade_caminhao;
-  tam_linha++;
-
-  debug_print(" + ");
-  debug_print("%.1f*%s [%d]", linha[coluna], get_col_name(lp, index_col[coluna]), index_col[coluna]);
+  index_col = (int *) malloc(quant_variaveis * sizeof(*index_col)); // Indice das variaveis
+  linha = (REAL *) malloc(quant_variaveis * sizeof(*linha)); // Multiplicador das variaveis
   
-  debug_print(" <= %d\n", 0);
+  // Percorre a linha da matriz (total de viagens para um item)
+  for(int i = 0; i < quant_itens; i++) {
+    // Pega o indice da variavel correspondente a posicao da matriz
+    index_col[i] = getPosicaoVariaveisMatriz(index_linha, i, quant_itens);
+    linha[i] = 1; // 1*M_[index_linha]_[i]
+  }
 
-  if(!add_constraintex(lp, quant_items + 1, linha, index_col, LE, 0)) {
-    fprintf(stderr, "Não foi possível construir o modelo\n");
+  // Adiciona restricao no lp_solve
+  if(!add_constraintex(lp, quant_itens, linha, index_col, EQ, 1)) {
+    fprintf(stderr, "Não foi possível adicionar a restrição!\n");
   }
 }
 
-void adiciona_valor_restricao (int index_var, int igual_a, int op,  lprec *lp) {
+// Adiciona a restrição: A soma dos pesos da carga em uma viagem deve ser menor que o
+// o peso máximo que o caminhão suporta
+void adiciona_restricao_coluna (int *pesos, int index_coluna, int quant_itens, int quant_variaveis, int capacidade_caminhao, lprec *lp) {
+  int *index_col = NULL;
+  REAL *linha = NULL;
+
+  index_col = (int *) malloc(quant_variaveis * sizeof(*index_col));
+  linha = (REAL *) malloc(quant_variaveis * sizeof(*linha));
+
+  // Percorre a coluna da matriz (total de itens em uma viagem)
+  for(int i = 0; i < quant_itens; i++) {
+    index_col[i] = getPosicaoVariaveisMatriz(i, index_coluna, quant_itens);
+    linha[i] = pesos[i];
+  }
+
+  // Adiciona a subtracao da constante do peso da carga na restricao
+  index_col[quant_itens] = getPosicaoVariaveisVetor(index_coluna, quant_itens);
+  linha[quant_itens] = -1 * capacidade_caminhao;
+
+  // Adiciona restricao no lp_solve
+  if(!add_constraintex(lp, quant_itens + 1, linha, index_col, LE, 0)) {
+    fprintf(stderr, "Não foi possível adicionar a restrição!\n");
+  }
+}
+
+// Cria restricao com uma variavel
+// Portanto cria restricao: [index_var] [op] [limite] 
+// Exemplo: V_0 = 1
+void adiciona_valor_restricao (int index_var, int limite, int op,  lprec *lp) {
   int *index_col = NULL;
   REAL *linha = NULL;
 
@@ -188,135 +169,139 @@ void adiciona_valor_restricao (int index_var, int igual_a, int op,  lprec *lp) {
   index_col[0] = index_var;
   linha[0] = 1;
 
-  if(!add_constraintex(lp, 1, linha, index_col, op, igual_a)) {
-    fprintf(stderr, "Não foi possível construir o modelo\n");
+  if(!add_constraintex(lp, 1, linha, index_col, op, limite)) {
+    fprintf(stderr, "Não foi possível adicionar a restrição!\n");
   }
 }
 
-void cria_funcao_objetivo (int quant_itens, int numero_colunas, int *viagens_utilizadas, lprec *lp) {
+// Cria funcao objetivo do modelo
+void cria_funcao_objetivo (int quant_itens, int numero_colunas, lprec *lp) {
   int *index_col = NULL;
   REAL *linha = NULL;
 
   index_col = (int *) malloc(numero_colunas * sizeof(*index_col));
   linha = (REAL *) malloc(numero_colunas * sizeof(*linha));
-  int tamanho = 0;
 
   for(int i = 0; i < quant_itens; i++){
     index_col[i] = getPosicaoVariaveisVetor(i, quant_itens);
     linha[i] = 1;
-    tamanho++;
   }
 
-  if(!set_obj_fnex(lp, tamanho, linha, index_col)) {
+  if(!set_obj_fnex(lp, quant_itens, linha, index_col)) {
     fprintf(stderr, "Não foi possível construir o modelo\n");
   }
 }
 
-int **parcial(int quant_items, int quant_pares_ord, int capacidade_caminhao, int *pesos_itens, par_ord_t *pares, int **solucao_parcial, int *viagens_utilizadas) {
+/************ FUNCAO PARCIAL ************/
 
+float parcial(int quant_items, int quant_pares_ord, int capacidade_caminhao, int *pesos_itens, par_ord_t *pares, int **solucao_parcial, int *viagens_utilizadas) {
+  // Cria variaveis para criar modelo do lp solve
   lprec *lp;
   int numero_colunas;
   int *index_col = NULL;
   REAL *linha = NULL;
 
-  // Inicia variáveis
-  numero_colunas = (quant_items*quant_items) + quant_items; // Matriz + vetor com viagens
+  /* Inicia variaveis */
+  // Calcula o total de variaveis necessárias
+  numero_colunas = (quant_items*quant_items) + quant_items; // |Matriz| + |vetor com viagens|
+  
+  // Cria modelo do lp_solve para o total de variaveis
   lp = make_lp(0, numero_colunas);
-
   if(lp == NULL){
     fprintf(stderr, "Não foi possível construir o modelo\n");
-    return NULL;
+    return -1;
   }
 
-  index_col = (int *) malloc(numero_colunas * sizeof(*index_col)); // ????
+  // Variaveis para representar linha da restricao
+  index_col = (int *) malloc(numero_colunas * sizeof(*index_col));
   linha = (REAL *) malloc(numero_colunas * sizeof(*linha));
-
   if(!index_col || !linha) {
     fprintf(stderr, "Não foi possível alocar espaço para restrições\n");
-    return NULL;
+    return -1;
   }
-  debug_print("numero_colunas: %d, quant_items: %d \n", numero_colunas, quant_items);
 
-  // Cria váriaveis no lp solve
-  debug_print("Criando nomes para variáveis: \n"); 
+
+  /* Cria váriaveis no lp solve */
   char nome_variavel[20];
+
+  // Cria variaveis para representar a matriz de solucoes
   for(int i = 0; i < quant_items; i++){
     for(int j = 0; j < quant_items; j++) {
         sprintf(nome_variavel, "M_%d_%d", i+1, j+1);
-        debug_print("%s[%d] ", nome_variavel, getPosicaoColuna(i, j, quant_items));
-        set_col_name(lp, getPosicaoColuna(i, j, quant_items), nome_variavel);
+        set_col_name(lp, getPosicaoVariaveisMatriz(i, j, quant_items), nome_variavel);
     }
-    debug_print("\n");
   }
 
-  debug_print("\n");
-
+  // Cria variaveis para representar o vetor de viagens
   for(int i = (quant_items*quant_items) + 1; i <= numero_colunas; i++){
-    int index = i - (quant_items*quant_items) - 1;
+    // int index = i - (quant_items*quant_items) - 1;
     sprintf(nome_variavel, "Y_%d", (i - (quant_items*quant_items)));
-    debug_print("%s ", nome_variavel);
     set_col_name(lp, i, nome_variavel);
   }
 
   debug_print("\nNomes de variáveis criados !\n");
 
+  /* Cria restricoes */
 
-  // Cria restrições de linha
+  // Coloca o lp solve no modo de retricoes
   set_add_rowmode(lp, TRUE);
-  debug_print("Criando restrições...\n");
-  debug_print("Criando restrição para linha da matriz: \n");
+
   for(int i = 0; i < quant_items; i++) {
-    adiciona_restricao_linha(i, quant_items, numero_colunas, solucao_parcial, lp);
-  }
-  
-  // Cria restrições de coluna
-  debug_print("Criando restrição para coluna da matriz: \n");
-  for(int i = 0; i < quant_items; i++) {
-    adiciona_restricao_coluna(pesos_itens, i, quant_items, numero_colunas, capacidade_caminhao, solucao_parcial, viagens_utilizadas, lp);
+    // Cria restrições de linha da matriz
+    adiciona_restricao_linha(i, quant_items, numero_colunas, lp);
+    
+    // Cria restrições de coluna da matriz
+    adiciona_restricao_coluna(pesos_itens, i, quant_items, numero_colunas, capacidade_caminhao, lp);
   }
 
-  debug_print("Criando restrição para valores preenchidos: \n");
+  // Adiciona restricao para valores preenchidos
   for(int i = 0; i < quant_items; i++){
     // verifica vetor de viagens
     if(viagens_utilizadas[i] != 0) {
+      // variavel = viagens_utilizadas[i]
       adiciona_valor_restricao(getPosicaoVariaveisVetor(i, quant_items), viagens_utilizadas[i], EQ, lp);
     } else {
+      // 0 <= variaval <= 1
       adiciona_valor_restricao(getPosicaoVariaveisVetor(i, quant_items), 0, GE, lp);
       adiciona_valor_restricao(getPosicaoVariaveisVetor(i, quant_items), 1, LE, lp);
     }
 
+    // Verifica matriz de solucoes parciais
     for(int j = 0; j < quant_items; j++){
       if(solucao_parcial[i][j] != 0) {
-        adiciona_valor_restricao(getPosicaoColuna(i, j, quant_items), solucao_parcial[i][j], EQ, lp);
+        adiciona_valor_restricao(getPosicaoVariaveisMatriz(i, j, quant_items), solucao_parcial[i][j], EQ, lp);
       } else {
-        adiciona_valor_restricao(getPosicaoColuna(i, j, quant_items), 0, GE, lp);
-        adiciona_valor_restricao(getPosicaoColuna(i, j, quant_items), 1, LE, lp);
+        adiciona_valor_restricao(getPosicaoVariaveisMatriz(i, j, quant_items), 0, GE, lp);
+        adiciona_valor_restricao(getPosicaoVariaveisMatriz(i, j, quant_items), 1, LE, lp);
       }
     }
   }
-
+  // Sai do modo de adicionar restricoes
   set_add_rowmode(lp, FALSE);
 
-  cria_funcao_objetivo(quant_items, numero_colunas, viagens_utilizadas, lp);
+  /* Cria função objetivo */
 
+  cria_funcao_objetivo(quant_items, numero_colunas, lp);
+  // Configura função objetivo como minizacao
   set_minim(lp);
-  printf("\n\n");
-  write_LP(lp, stdout);
 
-  /* I only want to see important messages on screen while solving */
+  // printf("\n\n"); 
+  // write_LP(lp, stdout);
+
+  /* Calcula solução */
+  // Exibir apenas as mensagens importantes durante a resoluca
   set_verbose(lp, IMPORTANT);
-
-  /* Now let lpsolve calculate a solution */
+  // Resolve
   solve(lp);
 
-  printf("\nObjective value: %f\n", get_objective(lp));
+  // Recebe valor da funcao objetivo
+  float resultado = get_objective(lp);
 
-  /* variable values */
+  // No modo debug imprime os valores das variaveis
+  debug_print("\nResultado: %f\n", resultado);
   get_variables(lp, linha);
   for(int i = 0; i < numero_colunas; i++)
-    printf("%s: %f\n", get_col_name(lp, i + 1), linha[i]);
-
-  // Adiciona função oC23: 0.000000bjetivo
-
-  return NULL;
+    debug_print("%s: %f\n", get_col_name(lp, i + 1), linha[i]);
+  
+  return resultado;
 }

@@ -7,7 +7,7 @@ COMPILER = -std=gnu99
 all: parcial-relaxada
 
 parcial-relaxada: parcial-relaxada.c
-	gcc -o parcial-relaxada parcial-relaxada.c $(CFLAGS) $(LDFLAGS) $(DEBUG_FLAGS) $(LP_SOLVE_FLAGS)
+	gcc -o parcial-relaxada parcial-relaxada.c $(CFLAGS) $(LDFLAGS) $(LP_SOLVE_FLAGS)
 
 clean:
 	-rm -f *~ *.o
