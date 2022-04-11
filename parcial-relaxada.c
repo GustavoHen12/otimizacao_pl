@@ -177,7 +177,7 @@ void adiciona_valor_restricao (int index_var, int limite, int op,  lprec *lp) {
 void adiciona_restricao_par_ordenada(int a, int b, int quant_itens, int quant_variaveis, lprec *lp) {
   int index_a = a-1;
   int index_b = b-1;
-
+  debug_print ("a: %d b: %d\n", a, b);
   int *index_col = NULL;
   REAL *linha = NULL;
 
@@ -188,7 +188,7 @@ void adiciona_restricao_par_ordenada(int a, int b, int quant_itens, int quant_va
   linha = (REAL *) malloc(quant_variaveis * sizeof(*linha));
   int tamanho = 0;
 
-  // Percorre a coluna da matriz (total de itens em uma viagem)
+  // Adiciona restrição (3)
   for(int p = 0; p < quant_itens; p++) {
     // Adiciona restricao somatorio
     index_col = (int *) malloc(quant_variaveis * sizeof(*index_col));
@@ -197,11 +197,11 @@ void adiciona_restricao_par_ordenada(int a, int b, int quant_itens, int quant_va
 
     for(int j = 0; j < p; j++) {
       index_col[tamanho] = getPosicaoVariaveisMatriz(index_a, j, quant_itens);
-      linha[tamanho] = 1;
+      linha[tamanho] = -1;
       tamanho++;
 
       index_col[tamanho] = getPosicaoVariaveisMatriz(index_b, j, quant_itens);
-      linha[tamanho] = -1;
+      linha[tamanho] = +1;
       tamanho++;
     }
 

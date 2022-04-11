@@ -1,5 +1,5 @@
 CFLAGS = -Wall
-LDFLAGS = -lm
+LDFLAGS = -lm -ldl
 DEBUG_FLAGS = -g -DDEBUG
 LP_SOLVE_FLAGS = liblpsolve55.so
 COMPILER = -std=gnu99
