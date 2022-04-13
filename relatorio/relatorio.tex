@@ -1,0 +1,106 @@
+\documentclass{article}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\usepackage[utf8]{inputenc}
+\usepackage[portuguese]{babel}
+
+\title{Trabalho Prático de Otimização - Parte 1}
+\author{
+    Gustavo Henrique da Silva Barbosa
+    \and
+    Pietro Polinari Cavassin
+}
+
+\begin{document}
+\maketitle
+
+\section{O Problema}
+\begin{itemize}
+\item Uma empresa de transporte recebeu uma carga a ser transportada.
+A carga tem $n$ itens, $I_1, I_2, \dots, I_n$, cada um com seu peso 
+$w_i$, para $1 \le i \le n$, em kg
+
+\item A empresa tem apenas um caminhão com capacidade máxima de carga $C$ kg,
+que fará uma ou mais viagens.
+
+\item As viagens recebem números de $1$ a $k$, onde $k$ é o número de viagens
+feitas.
+
+\item Determinamos a função $v$, onde $v(i)$ é a viagem onde foi transportado
+o item $I_i$. 
+
+\item Para cada par ordenado $(a, b)$ entregue pelo cliente é determinada a
+restrição $v(a) < v(b)$.
+
+\item A tarefa é decidir quais itens vão em que viagem de forma a minimizar
+o número de viagens.
+\end{itemize}
+
+\newpage
+\section{Modelagem}
+
+$$\min \sum_{j=1}^n y_j$$
+S.A 
+
+\begin{align}
+\sum_{i=1}^n M_{ij} \cdot w_i \le C \cdot y_j&, & 
+    \textsf{ para todo }& j \in \mathbb{N},\ 1 \le j \le n\\
+\sum_{j=1}^n M_{ij} = 1&,             & 
+    \textsf{ para todo }& i \in \mathbb{N},\ 1 \le i \le n
+\end{align}
+Para cada par ordenado $(a,b)$:
+\begin{align}
+\sum_{j=1}^p M_{aj} \ge \sum_{j=1}^p M_{bj}&, & 
+    \textsf{ para todo }& p \in \mathbb{N},\ 1 \le p \le n\\
+M_{aj} + M_{bj} \le 1&, &
+    \textsf{ para todo }& j \in \mathbb{N},\ 1 \le j \le n
+\end{align}
+Restrições de valor:
+\begin{align}
+0 \le M_{ij}\le 1&, &
+    \textsf{ para todo }& 1 \le i,j \le n\\
+0 \le y_{j}\le 1&, &
+    \textsf{ para todo }& 1 \le j \le n
+\end{align}
+
+As seguintes variáveis foram utilizadas na modelagem:
+\begin{itemize}
+    \item $C$: carga suportada pelo caminhão
+    
+    \item $y_j$: vale $0$ se a viagem $j$ não for feita e $1$ caso contrário.
+
+    \item $M_{ij}$: vale $1$ se o item $i$ for transportado na viagem $j$
+    e $0$, caso contrário.
+
+    \item $w_i$: constante que equivale ao peso do item $i$.
+    
+    \item $n$: número de itens a serem transportados pelo caminhão
+\end{itemize}
+
+A restrição $(1)$ garante que, para cada viagem $j$, a soma das cargas a serem transportadas nela será menor ou igual à carga máxima $C$. A multiplicação dentro do somatório ($M_{ij} \cdot w_i$) garante que apenas sejam somados os pesos que serão transportados na viagem $j$. Da mesma forma, a multiplicação ao lado direito ($C \cdot y_j$) reduz a carga suportada a $0$, caso a viagem $j$ não seja feita ($y_j = 0$).
+
+A restrição $(2)$ garante que cada item $i$ seja transportado em apenas uma viagem, visto que uma linha $i$ corresponde a um item.
+
+A restrição $(3)$ garante que, para um par ordenado $(a,b)$, $v(a) \le v(b)$. Isso ocorre, pois para uma dada linha $a$, A soma dos itens de a entre a coluna $1$ e uma coluna $p$ será $1$ caso $v(a) <= p$ e $0$, caso contrário. Portanto, a restrição $(3)$ indica que $v(a) \le v(b)$
+
+A restrição $(4)$ garante que, para um par ordenado $(a,b)$, o item $a$ seja transportado na mesma viagem que $b$. Isso ocorre, pois as colunas representam as viagens, e a soma das linhas $a$ e $b$ em uma mesma coluna não pode passar de 1. Ou seja, ambos os valores não podem ser $1$ ao mesmo tempo.
+
+As restrições $(5)$ e $(6)$ limitam os valores dos itens de $M$ e $y$
+entre $0$ e $1$.
+
+\begin{section}{Detalhes de Implementação}
+    Na implementação em lp\_solve, todas as restrições foram utilizadas, incluindo a de ordem. Isso fez com que o resultado da solução ótima ficasse diferente do resultado esperado na especificação do trabalho.
+
+    Isso aconteceu, pois as restrições de ordem exigiam que o item $2$ fosse transportado antes do $3$ e o $5$ antes do $1$. Além disso, a solução parcial especificada fixou o item $3$ na viagem $2$ e o item $5$ na viagem $3$. Sabendo que o item $5$ deve ir na viagem $3$, necessariamente o item $1$ deve ir na viagem $4$ ou depois. Da mesma forma, o item $3$ foi fixado na viagem $2$, obrigando o item $2$ a ser transportado na viagem $1$.
+
+    Isso fez com que fossem transportados, nessa ordem, 6kg (item 2), 10kg, 10kg e 5kg (item 1). 
+\end{section}
+
+\begin{section}{Referências}
+
+Bin Packing Problem. In: Wikipedia: the free encyclopedia. Disponível em: \url{https://en.wikipedia.org/wiki/Bin_packing_problem} Acesso em: 12 mar 2022. 
+
+\end{section}
+
+\end{document}
