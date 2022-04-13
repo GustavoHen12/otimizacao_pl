@@ -357,7 +357,11 @@ float parcial(int quant_items, int quant_pares_ord, int capacidade_caminhao, int
   // Exibir apenas as mensagens importantes durante a resoluca
   set_verbose(lp, IMPORTANT);
   // Resolve
-  solve(lp);
+  int resultSolve = solve(lp);
+  if(resultSolve != OPTIMAL) {
+    fprintf(stderr, "Não foi possível chegar a um resultado ótimo!\n");
+    return -1;
+  }
 
   // Recebe valor da funcao objetivo
   float resultado = get_objective(lp);
