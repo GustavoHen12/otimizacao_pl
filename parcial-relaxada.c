@@ -58,7 +58,6 @@ int main() {
     scanf("%d", &viagem);
 
     solucao[item - 1][viagem - 1] = 1;
-    viagens[viagem-1] = 1;
   }
   
   // ********* Encontra solução parcial *********
@@ -319,15 +318,9 @@ float parcial(int quant_items, int quant_pares_ord, int capacidade_caminhao, int
 
   // Adiciona restricao de valor
   for(int i = 0; i < quant_items; i++){
-    // verifica vetor de viagens
-    if(viagens_utilizadas[i] != 0) {
-      // variavel = viagens_utilizadas[i]
-      adiciona_valor_restricao(getPosicaoVariaveisVetor(i, quant_items), viagens_utilizadas[i], EQ, lp);
-    } else {
-      // 0 <= variaval <= 1
-      adiciona_valor_restricao(getPosicaoVariaveisVetor(i, quant_items), 0, GE, lp);
-      adiciona_valor_restricao(getPosicaoVariaveisVetor(i, quant_items), 1, LE, lp);
-    }
+    // adiciona restricao de viagens
+    adiciona_valor_restricao(getPosicaoVariaveisVetor(i, quant_items), 0, GE, lp);
+    adiciona_valor_restricao(getPosicaoVariaveisVetor(i, quant_items), 1, LE, lp);
 
     // Verifica matriz de solucoes parciais
     for(int j = 0; j < quant_items; j++){
