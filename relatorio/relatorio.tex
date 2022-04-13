@@ -89,14 +89,6 @@ A restrição $(4)$ garante que, para um par ordenado $(a,b)$, o item $a$ seja t
 As restrições $(5)$ e $(6)$ limitam os valores dos itens de $M$ e $y$
 entre $0$ e $1$.
 
-\begin{section}{Detalhes de Implementação}
-    Na implementação em lp\_solve, todas as restrições foram utilizadas, incluindo a de ordem. Isso fez com que o resultado da solução ótima ficasse diferente do resultado esperado na especificação do trabalho.
-
-    Isso aconteceu, pois as restrições de ordem exigiam que o item $2$ fosse transportado antes do $3$ e o $5$ antes do $1$. Além disso, a solução parcial especificada fixou o item $3$ na viagem $2$ e o item $5$ na viagem $3$. Sabendo que o item $5$ deve ir na viagem $3$, necessariamente o item $1$ deve ir na viagem $4$ ou depois. Da mesma forma, o item $3$ foi fixado na viagem $2$, obrigando o item $2$ a ser transportado na viagem $1$.
-
-    Isso fez com que fossem transportados, nessa ordem, 6kg (item 2), 10kg, 10kg e 5kg (item 1). 
-\end{section}
-
 \begin{section}{Referências}
 
 Bin Packing Problem. In: Wikipedia: the free encyclopedia. Disponível em: \url{https://en.wikipedia.org/wiki/Bin_packing_problem} Acesso em: 12 mar 2022. 
