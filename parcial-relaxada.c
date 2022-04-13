@@ -49,14 +49,19 @@ int main() {
   for (int i = 0; i < quant_items; i++)
     viagens[i] = 0;
 
-  // ********* Executa *********
-  //exemplo
-  solucao[2][1] = 1;
-  solucao[4][2] = 1;
+  // ********* Le soluções parciais *********
+  int numero_solucoes_parciais;
+  scanf("%d", &numero_solucoes_parciais);
+  for(int i = 0; i < numero_solucoes_parciais; i++) {
+    int item, viagem;
+    scanf("%d", &item);
+    scanf("%d", &viagem);
 
-  viagens[1] = 1;
-  viagens[2] = 1;
+    solucao[item - 1][viagem - 1] = 1;
+    viagens[viagem-1] = 1;
+  }
   
+  // ********* Encontra solução parcial *********
   // Executa funcao parcial que ira calcular o resultado da funcao objetiva
   float resultado = parcial(quant_items, quant_pares_ord, capacidade_caminhao, pesos_itens, pares, solucao, viagens);
 
@@ -189,8 +194,8 @@ void adiciona_restricao_par_ordenada(int a, int b, int quant_itens, int quant_va
   int tamanho = 0;
 
   // Adiciona restrição (3)
+  // Garante que, para um par ordenado (a, b), v(a) <= v(b)
   for(int p = 0; p < quant_itens; p++) {
-    // Adiciona restricao somatorio
     index_col = (int *) malloc(quant_variaveis * sizeof(*index_col));
     linha = (REAL *) malloc(quant_variaveis * sizeof(*linha));
     tamanho = 0;
@@ -211,7 +216,7 @@ void adiciona_restricao_par_ordenada(int a, int b, int quant_itens, int quant_va
     }
   }
 
-  //
+  // Adiciona restrição (4)
   for(int i = 0; i < quant_itens; i++){
     index_col_rest_sum = (int *) malloc(2 * sizeof(*index_col_rest_sum));
     linha_rest_sum = (REAL *) malloc(2 * sizeof(*linha_rest_sum));
@@ -342,10 +347,12 @@ float parcial(int quant_items, int quant_pares_ord, int capacidade_caminhao, int
   cria_funcao_objetivo(quant_items, numero_colunas, lp);
   // Configura função objetivo como minizacao
   set_minim(lp);
-
+  
+  #ifdef DEBUG
   printf("\n\n"); 
   write_LP(lp, stdout);
-
+  #endif
+  
   /* Calcula solução */
   // Exibir apenas as mensagens importantes durante a resoluca
   set_verbose(lp, IMPORTANT);
