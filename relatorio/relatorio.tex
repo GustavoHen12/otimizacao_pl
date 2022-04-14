@@ -89,6 +89,21 @@ A restrição $(4)$ garante que, para um par ordenado $(a,b)$, o item $a$ seja t
 As restrições $(5)$ e $(6)$ limitam os valores dos itens de $M$ e $y$
 entre $0$ e $1$.
 
+\begin{section}{Instruções de compilação e execução}
+    
+        Para executar o programa, pode ser necessário utilizar a variável de ambiente LD\_LIBRARY\_PATH para especificar o diretório da biblioteca do lp\_solve. Dessa forma, antes de rodar o programa, copiar a seguinte linha no terminal (dentro do diretório do trabalho): 
+
+    \texttt{\$ export LD\_LIBRARY\_PATH = .}
+
+    Depois, compilar com 
+    
+    \texttt{\$ make}
+
+    e executar com 
+    
+    \texttt{\$ ./parcial\_relaxada < teste\_1.in}
+\end{section}
+
 \begin{section}{Referências}
 
 Bin Packing Problem. In: Wikipedia: the free encyclopedia. Disponível em: \url{https://en.wikipedia.org/wiki/Bin_packing_problem} Acesso em: 12 mar 2022. 
