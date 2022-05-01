@@ -6,6 +6,9 @@ COMPILER = -std=gnu99
 
 all: parcial-relaxada
 
+envio: envio.c
+	gcc -o envio envio.c $(CFLAGS) $(LDFLAGS)
+
 parcial-relaxada: parcial-relaxada.c
 	gcc -o parcial-relaxada parcial-relaxada.c $(CFLAGS) $(LDFLAGS) $(LP_SOLVE_FLAGS)
 
@@ -16,4 +19,4 @@ clean:
 	-rm -f *~ *.o
 	
 purge: clean
-	-rm -f parcial-relaxada
+	-rm -f envio
