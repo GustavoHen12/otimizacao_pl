@@ -135,6 +135,7 @@ void adiciona_restricao_linha (int index_linha, int quant_itens, int quant_varia
   }
 }
 
+//
 // Adiciona a restrição: A soma dos pesos da carga em uma viagem deve ser menor que o
 // o peso máximo que o caminhão suporta
 void adiciona_restricao_coluna (int *pesos, int index_coluna, int quant_itens, int quant_variaveis, int capacidade_caminhao, lprec *lp) {
