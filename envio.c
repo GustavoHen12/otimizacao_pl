@@ -150,8 +150,14 @@ void le_entrada(int *quant_items, int *quant_pares_ord, int *capacidade_caminhao
   debug_print("Fim leitura entrada !\n");
 }
 
-float parcial(int quant_items, int capacidade_caminhao, int *pesos_itens, int **mat_ordem, int **solucao_parcial, int *viagens_utilizadas) {
-  return 1;
+int parcial(int quant_items, int capacidade_caminhao, int *pesos_itens, int **mat_ordem, int **solucao_parcial, int *viagens_utilizadas) {
+  float soma_pesos = 0;
+
+  for(int i = 1; i <= quant_items; i++){
+    soma_pesos+=pesos_itens[i];
+  }
+
+  return ceil(soma_pesos/capacidade_caminhao);
 }
 
 int verificaViabilidade(int viagem, int quant_items, int capacidade_caminhao, int *pesos_itens, int **solucao_parcial) {
