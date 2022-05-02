@@ -4,21 +4,6 @@
 #include <limits.h>
 #include "data_strucs.h"
 
-void imprimeVetor(int *viagens_utilizadas, int tamanho){
-  for(int i = 0; i < tamanho; i++)
-    printf(" %d ", viagens_utilizadas[i]);
-  printf("\n");
-}
-
-void imprimeSolucaoParcial(int **solucao, int tamanho){
-  for(int i = 0; i < tamanho; i++){
-    printf(" [%d] => ", i);
-    imprimeVetor(solucao[i], tamanho);
-  }
-  printf("\n");
-
-}
-
 // Macro para print quando executado em modo debug
 #ifdef DEBUG
 #define debug_print(...) do{ printf( __VA_ARGS__ ); } while(0)
@@ -267,15 +252,18 @@ int main() {
 
   // ********* Encontra solução *********
   branchBound(1, quant_items, capacidade_caminhao, pesos_itens, mat_ordem, solucao, viagens);
-
-  printf("%d\n", menor_numero_viagens);
-  for(int i = 1; i <= quant_items; i++){
-    for(int j = 1; j <= quant_items; j++){
-      if(solucao_minima[i][j] == 1){
-        printf("%d ", j);
+  if(menor_numero_viagens == INT_MAX){
+    printf("Inviavel !\n");
+  } else {
+    printf("%d\n", menor_numero_viagens);
+    for(int i = 1; i <= quant_items; i++){
+      for(int j = 1; j <= quant_items; j++){
+        if(solucao_minima[i][j] == 1){
+          printf("%d ", j);
+        }
       }
+      printf("\n");
     }
-    printf("\n");
   }
 
   return 0;
