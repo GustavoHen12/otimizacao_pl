@@ -84,29 +84,51 @@ int bfs(queue_items_t *ordem, int n, int a, int b){
 // EX: viagens[3] == 2 quer dizer que o item 3 vai na viagem 2
 // A função viavel testa se o item 'item' está posicionado de
 // forma viável em relação aos outros
-int viavel(int *viagens, int n, int item, queue_items_t *ordem){
+int viavel(int *viagens, int n, int item, int **mat_ordem){
+    // TODO: testar cargas do caminhão
     int ret = 1;
     for (int i = 1; i <= n; ++i){
         if (!viagens[i] || i == item) continue;
-        if (viagens[i] <= viagens[item])
-            if (bfs(ordem, n, item, i)) ret = 0;
-        
-        if (viagens[i] >= viagens[item])
-            if (bfs(ordem, n, i, item)) ret = 0;
+        if (viagens[i] <= viagens[item] && mat_ordem[item][i] || 
+            viagens[i] >= viagens[item] && mat_ordem[i][item]    )
+            ret = 0;
     }
     return ret;
 }
 
+int parcial(int n, int p, int c, int *w, int **mat_ordem, int **mat_parcial, int *V){
+    int *Vaux = (int *) calloc(n, sizeof(int));
+    int *cargas = (int *) calloc(n, sizeof(int));
+    for (int i = 1; i < n; ++i){
+        if (V[i]) cargas[V[i]] += w[i];
+        Vaux[i] = V[i];
+    } 
+
+    for (int i = 1; i < n; ++i){
+        // vou pro primeiro caminhão que da pra colocar
+        // coloco o que da nesse e nos proximos
+    }
+}
+
+void gera_matriz_ordem(queue_items_t *ordens, int **matriz_ordem, int n){
+    for (int i = 1; i < n; ++i){
+        for (int j = 1; j < n; ++j){
+            if (i != j) matriz_ordem[i][j] = bfs(ordens, n, i, j);
+        }
+    }
+}
+
 int main(){
     int n, p, c;
-    int **trips;
+    int **trips, **mat_ordem;
     int *w, *viagens;
 
     // Leitura 
     scanf("%d %d %d", &n, &p, &c);
 
     // Alocação
-    trips = new_matrix(n, n);
+    trips = new_matrix(n+1, n+1);
+    mat_ordem = new_matrix(n+1, n+1);
     w = new_array(n);
     viagens = new_array(n);
     queue_items_t **ordens = (queue_items_t **) malloc((n+1)*sizeof(queue_items_t *));
@@ -119,6 +141,7 @@ int main(){
         scanf("%d", w+i);
     for (int i = 0; i < p; ++i)
         ler_ordem(ordens);
+    gera_matriz_ordem(ordens, mat_ordem, n+1);
 
     #ifdef DEBUG
     for (int i = 1; i <= n; ++i){
