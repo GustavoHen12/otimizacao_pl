@@ -4,7 +4,7 @@ DEBUG_FLAGS = -g -DDEBUG
 LP_SOLVE_FLAGS = liblpsolve55.so
 COMPILER = -std=gnu99
 
-all: parcial-relaxada
+all: envio
 
 envio: envio.c data_strucs.o
 	gcc -o envio envio.c data_strucs.o $(CFLAGS) $(LDFLAGS)
