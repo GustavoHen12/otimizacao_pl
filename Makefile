@@ -6,8 +6,11 @@ COMPILER = -std=gnu99
 
 all: parcial-relaxada
 
-envio: envio.c
-	gcc -o envio envio.c $(CFLAGS) $(LDFLAGS)
+envio: envio.c data_strucs.o
+	gcc -o envio envio.c data_strucs.o $(CFLAGS) $(LDFLAGS)
+
+data_strucs.o: data_strucs.c data_strucs.h
+	$(CC) -c data_strucs.c -o data_strucs.o
 
 parcial-relaxada: parcial-relaxada.c
 	gcc -o parcial-relaxada parcial-relaxada.c $(CFLAGS) $(LDFLAGS) $(LP_SOLVE_FLAGS)
